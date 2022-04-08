@@ -20,7 +20,7 @@ func main() {
 		fmt.Printf("Could not start application: %v\n", err)
 		os.Exit(1)
 	}
-	p := tea.NewProgram(app)
+	p := tea.NewProgram(app, tea.WithMouseCellMotion())
 	if err := p.Start(); err != nil {
 		fmt.Printf("oops: %v", err)
 		os.Exit(1)

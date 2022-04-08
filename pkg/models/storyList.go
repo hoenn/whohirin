@@ -56,7 +56,8 @@ func (m StoryListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "right", "l":
 			m.currentSelection = incSelectionWithWrap(m.currentSelection, 1, len(m.stories))
 		case "enter":
-			return NewStory(m.stories[m.currentSelection], m, m.hn), nil
+			s := NewStory(m.stories[m.currentSelection], m, m.hn)
+			return s, nil
 		}
 	}
 	return m, nil
