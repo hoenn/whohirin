@@ -21,7 +21,15 @@ func NewApp(userID string, client *hnapi.HNClient) (*App, error) {
 	}, nil
 }
 
+var initWindowSize *tea.WindowSizeMsg
+
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		if initWindowSize == nil {
+			initWindowSize = &msg
+		}
+	}
 	return a.current.Update(msg)
 }
 func (a App) View() string {

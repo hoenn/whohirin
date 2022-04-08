@@ -59,12 +59,21 @@ func NewStory(storyID int, previous tea.Model, client *hnapi.HNClient) *StoryMod
 		currentSelection: 0,
 		ready:            false,
 	}
+	headerHeight := lipgloss.Height(s.headerView("??"))
+	footerHeight := lipgloss.Height(s.footerView())
+	verticalMarginHeight := headerHeight + footerHeight
+	s.viewport = viewport.New(initWindowSize.Width, initWindowSize.Height-verticalMarginHeight)
+	s.viewport.YPosition = headerHeight
 	s.currentComment = s.loadCommentContent()
+	s.viewport.SetContent(s.formatCurrentContent())
+	s.ready = true
+
+	s.viewport.YPosition = headerHeight + 1
+
 	return s
 }
 
 func (m StoryModel) Init() tea.Cmd {
-
 	return nil
 }
 
@@ -141,6 +150,9 @@ func (m StoryModel) formatCurrentContent() string {
 		}
 		text = t
 	}
+	if text == "" {
+		return fmt.Sprintf("Comment %d, was [deleted]", m.currentComment.ID)
+	}
 	return wordwrap.String(text, 80)
 }
 
@@ -152,8 +164,9 @@ func (m StoryModel) headerView(text string) string {
 
 func (m StoryModel) footerView() string {
 	info := infoStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
-	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)))
-	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
+	currentNumberInfo := infoStyle.Render(fmt.Sprintf("%d / %d", m.currentSelection+1, len(m.comments)))
+	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)-lipgloss.Width(currentNumberInfo)))
+	return lipgloss.JoinHorizontal(lipgloss.Center, currentNumberInfo, line, info)
 }
 
 func max(a, b int) int {
