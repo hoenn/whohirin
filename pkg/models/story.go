@@ -33,7 +33,7 @@ type StoryModel struct {
 	commentContent   map[int]*hnapi.Comment // lazy loaded
 	currentSelection int
 	currentComment   *hnapi.Comment
-	formatter        *formatter
+	formatter        formatter
 
 	viewport viewport.Model
 	ready    bool
@@ -59,7 +59,7 @@ func NewStory(storyID int, previous tea.Model, client *hnapi.HNClient) *StoryMod
 		commentContent:   make(map[int]*hnapi.Comment),
 		currentSelection: 0,
 		ready:            false,
-		formatter: &formatter{
+		formatter: formatter{
 			Width: defaultWidth,
 		},
 	}
@@ -69,6 +69,7 @@ func NewStory(storyID int, previous tea.Model, client *hnapi.HNClient) *StoryMod
 	footerHeight := lipgloss.Height(s.footerView())
 	verticalMarginHeight := headerHeight + footerHeight
 	s.viewport = viewport.New(initWindowSize.Width, initWindowSize.Height-verticalMarginHeight)
+	s.formatter.Width = initWindowSize.Width - 1
 	s.viewport.YPosition = headerHeight
 	s.currentComment = s.loadCommentContent()
 	s.viewport.SetContent(s.formatter.Text(s.currentComment.Text))
@@ -131,6 +132,7 @@ func (m StoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.ready {
 			m.viewport = viewport.New(msg.Width, msg.Height-verticalMarginHeight)
 			m.viewport.YPosition = headerHeight
+			m.formatter.Width = msg.Width - 1
 			m.currentComment = m.loadCommentContent()
 			m.viewport.SetContent(m.formatter.Text(m.currentComment.Text))
 			m.viewport.YPosition = headerHeight + 1
@@ -138,6 +140,9 @@ func (m StoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.viewport.Width = msg.Width
 			m.viewport.Height = msg.Height - verticalMarginHeight
+			m.formatter.Width = msg.Width - 1
+			m.currentComment = m.loadCommentContent()
+			m.viewport.SetContent(m.formatter.Text(m.currentComment.Text))
 		}
 
 	}
