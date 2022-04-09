@@ -70,7 +70,7 @@ func (f *Fetcher) PostList() []string {
 func (f *Fetcher) Post(id string) (*Post, error) {
 	post, found := f.posts[id]
 	if !found {
-		return nil, fmt.Errorf("not found")
+		return nil, fmt.Errorf("post ID not found")
 	}
 	if post != nil {
 		return post, nil
@@ -95,6 +95,7 @@ func (f *Fetcher) Post(id string) (*Post, error) {
 		comments[commIDStr] = nil
 	}
 	p.comments = comments
+	f.posts[id] = p
 	return p, nil
 }
 
@@ -147,6 +148,18 @@ func (f *Fetcher) PostComment(postID, commentID string) (*Comment, error) {
 		Read: false,
 	}
 	p.comments[commentID] = cc
-
+	f.posts[postID] = p
 	return cc, nil
+}
+
+func (f *Fetcher) TogglePostCommentRead(postID, commentID string) *Comment {
+	c, err := f.PostComment(postID, commentID)
+	if err != nil {
+		return nil
+	}
+
+	c.Read = !c.Read
+
+	return c
+
 }

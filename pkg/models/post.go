@@ -19,6 +19,12 @@ var (
 		return lipgloss.NewStyle().BorderStyle(b).Padding(0, 1).Foreground(lipgloss.Color("#ff6600"))
 	}()
 
+	readMarkerStyle = func() lipgloss.Style {
+		b := lipgloss.RoundedBorder()
+		b.Left = "┤"
+		return lipgloss.NewStyle().BorderStyle(b).Padding(0, 1).Foreground(lipgloss.Color("#00FF00"))
+	}()
+
 	infoStyle = func() lipgloss.Style {
 		b := lipgloss.RoundedBorder()
 		b.Left = "┤"
@@ -82,13 +88,14 @@ func NewPost(postID string, previous tea.Model, fetcher *data.Fetcher) (*PostMod
 }
 
 type postKeyMap struct {
-	Left  key.Binding
-	Right key.Binding
-	Back  key.Binding
-	Help  key.Binding
-	Quit  key.Binding
-	Up    key.Binding
-	Down  key.Binding
+	Left   key.Binding
+	Right  key.Binding
+	Back   key.Binding
+	Help   key.Binding
+	Quit   key.Binding
+	Up     key.Binding
+	Down   key.Binding
+	Select key.Binding
 }
 
 func (k postKeyMap) ShortHelp() []key.Binding {
@@ -96,7 +103,7 @@ func (k postKeyMap) ShortHelp() []key.Binding {
 }
 func (k postKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.Left, k.Right, k.Up, k.Down},
+		{k.Left, k.Right, k.Up, k.Down, k.Select},
 		{k.Help, k.Back, k.Quit},
 	}
 }
@@ -113,6 +120,10 @@ var postKeys = postKeyMap{
 	Back: key.NewBinding(
 		key.WithKeys("backspace"),
 		key.WithHelp("backspace", "previous view"),
+	),
+	Select: key.NewBinding(
+		key.WithKeys("enter", "space"),
+		key.WithHelp("enter / space", "mark as read"),
 	),
 	Help: key.NewBinding(
 		key.WithKeys("h", "?"),
@@ -153,6 +164,9 @@ func (m PostModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.updateViews()
 		case key.Matches(msg, m.keys.Back):
 			return m.previous, nil
+		case key.Matches(msg, m.keys.Select):
+			m.loadCurrentSelection()
+			m.toggleCurrentSelectionRead()
 		case key.Matches(msg, m.keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
 			m.updateViews()
@@ -212,8 +226,16 @@ func (m *PostModel) headerView() string {
 		author = m.currentComment.Data.By
 	}
 	title := titleStyle.Render(fmt.Sprintf("https://news.ycombinator.com/user?id=%s", author))
-	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(title)))
-	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
+
+	readStatus := "◯"
+	if m.currentComment != nil {
+		if m.currentComment.Read == true {
+			readStatus = "✔"
+		}
+	}
+	readMarker := readMarkerStyle.Render(readStatus)
+	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(title)-lipgloss.Width(readMarker)))
+	return lipgloss.JoinHorizontal(lipgloss.Center, title, line, readMarker)
 }
 
 func (m *PostModel) footerView() string {
@@ -254,5 +276,10 @@ func (m *PostModel) loadCurrentSelection() {
 		fmt.Println(err)
 		return
 	}
+	m.currentComment = c
+}
+
+func (m *PostModel) toggleCurrentSelectionRead() {
+	c := m.hn.TogglePostCommentRead(m.postID, m.commentIDs[m.currentCommentIdx])
 	m.currentComment = c
 }
