@@ -52,9 +52,9 @@ func (m StoryListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "left", "h":
-			m.currentSelection = decSelectionWithWrap(m.currentSelection, 1, len(m.stories))
+			m.currentSelection = m.decCommentSelection()
 		case "right", "l":
-			m.currentSelection = incSelectionWithWrap(m.currentSelection, 1, len(m.stories))
+			m.currentSelection = m.incCommentSelection()
 		case "enter":
 			return NewStory(m.stories[m.currentSelection], m, m.hn), nil
 		}
@@ -72,4 +72,16 @@ func (c *StoryListModel) getStoryTitle(id int) (string, error) {
 		return "", errors.New("not a story")
 	}
 	return story.Title, nil
+}
+
+
+func (m StoryListModel) incCommentSelection() int {
+	return (m.currentSelection + 1) % len(m.stories)
+}
+
+func (m StoryListModel) decCommentSelection() int {
+	if m.currentSelection-1 < 0 {
+		return len(m.stories) - 1
+	}
+	return m.currentSelection - 1
 }
