@@ -13,6 +13,8 @@ type App struct {
 	fetcher *data.Fetcher
 }
 
+const defaultWidth = 80
+
 func NewApp(userID string, client *hnapi.HNClient) (*App, error) {
 	f, err := data.NewFetcher(userID)
 	if err != nil {

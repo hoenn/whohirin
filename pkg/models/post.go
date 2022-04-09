@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -34,24 +36,28 @@ type PostModel struct {
 	hn        *data.Fetcher
 	formatter formatter
 
-	viewport viewport.Model
-	ready    bool
+	help         help.Model
+	keys         postKeyMap
+	viewport     viewport.Model
+	windowHeight int
+	ready        bool
 }
-
-const defaultWidth = 80
 
 func NewPost(postID string, previous tea.Model, fetcher *data.Fetcher) (*PostModel, error) {
 	commentIDs, err := fetcher.PostCommentsList(postID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load post")
 	}
-
+	h := help.New()
+	h.Width = initWindowSize.Width
 	s := &PostModel{
 		postID:            postID,
 		hn:                fetcher,
 		previous:          previous,
 		commentIDs:        commentIDs,
 		currentCommentIdx: 0,
+		help:              h,
+		keys:              postKeys,
 		ready:             false,
 		formatter: formatter{
 			Width: defaultWidth,
@@ -61,8 +67,10 @@ func NewPost(postID string, previous tea.Model, fetcher *data.Fetcher) (*PostMod
 	// Initial Viewport setup
 	headerHeight := lipgloss.Height(s.headerView())
 	footerHeight := lipgloss.Height(s.footerView())
-	verticalMarginHeight := headerHeight + footerHeight
-	s.viewport = viewport.New(initWindowSize.Width, initWindowSize.Height-verticalMarginHeight)
+	helpHeight := lipgloss.Height(s.help.View(s.keys))
+	verticalMarginHeight := headerHeight + footerHeight + helpHeight
+	s.windowHeight = initWindowSize.Height
+	s.viewport = viewport.New(initWindowSize.Width, s.windowHeight-verticalMarginHeight)
 	s.formatter.Width = initWindowSize.Width - 1
 	s.viewport.YPosition = headerHeight
 	s.loadCurrentSelection()
@@ -73,36 +81,92 @@ func NewPost(postID string, previous tea.Model, fetcher *data.Fetcher) (*PostMod
 	return s, nil
 }
 
+type postKeyMap struct {
+	Left  key.Binding
+	Right key.Binding
+	Back  key.Binding
+	Help  key.Binding
+	Quit  key.Binding
+	Up    key.Binding
+	Down  key.Binding
+}
+
+func (k postKeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Help, k.Back, k.Quit}
+}
+func (k postKeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Left, k.Right, k.Up, k.Down},
+		{k.Help, k.Back, k.Quit},
+	}
+}
+
+var postKeys = postKeyMap{
+	Left: key.NewBinding(
+		key.WithKeys("left", "h"),
+		key.WithHelp("← / h", "previous"),
+	),
+	Right: key.NewBinding(
+		key.WithKeys("right", "l"),
+		key.WithHelp("→ / l", "next"),
+	),
+	Back: key.NewBinding(
+		key.WithKeys("backspace"),
+		key.WithHelp("backspace", "previous view"),
+	),
+	Help: key.NewBinding(
+		key.WithKeys("h", "?"),
+		key.WithHelp("h / ?", "toggle help"),
+	),
+	Quit: key.NewBinding(
+		key.WithKeys("q", "ctrl+c"),
+		key.WithHelp("q / ctrl+c", "quit"),
+	),
+	// These are defined in the viewport component without help text.
+	Up: key.NewBinding(
+		key.WithHelp("↑ / k", "scroll up"),
+	),
+	Down: key.NewBinding(
+		key.WithHelp("↓ / j", "scroll down"),
+	),
+}
+
 func (m PostModel) Init() tea.Cmd {
 	return nil
 }
 
 func (m PostModel) View() string {
-	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView())
+	return fmt.Sprintf("%s\n%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView(), m.help.View(m.keys))
 }
 
 func (m PostModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
+		switch {
+		case key.Matches(msg, m.keys.Quit):
 			return m, tea.Quit
-		case "left", "h":
+		case key.Matches(msg, m.keys.Left):
 			m.decCommentSelection()
 			m.updateViews()
-		case "right", "l":
+		case key.Matches(msg, m.keys.Right):
 			m.incCommentSelection()
 			m.updateViews()
-		case "backspace":
+		case key.Matches(msg, m.keys.Back):
 			return m.previous, nil
+		case key.Matches(msg, m.keys.Help):
+			m.help.ShowAll = !m.help.ShowAll
+			m.updateViews()
 		}
 	case tea.WindowSizeMsg:
 		headerHeight := lipgloss.Height(m.headerView())
 		footerHeight := lipgloss.Height(m.footerView())
-		verticalMarginHeight := headerHeight + footerHeight
+		helpHeight := lipgloss.Height(m.help.View(m.keys))
+		verticalMarginHeight := headerHeight + footerHeight + helpHeight
+		m.help.Width = msg.Width
 
 		if !m.ready {
-			m.viewport = viewport.New(msg.Width, msg.Height-verticalMarginHeight)
+			m.windowHeight = msg.Height
+			m.viewport = viewport.New(msg.Width, m.windowHeight-verticalMarginHeight)
 			m.viewport.YPosition = headerHeight
 			m.formatter.Width = msg.Width - 1
 			m.updateViews()
@@ -110,7 +174,8 @@ func (m PostModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.ready = true
 		} else {
 			m.viewport.Width = msg.Width
-			m.viewport.Height = msg.Height - verticalMarginHeight
+			m.windowHeight = msg.Height
+			m.viewport.Height = m.windowHeight - verticalMarginHeight
 			m.formatter.Width = msg.Width - 1
 			m.updateViews()
 		}
@@ -132,6 +197,11 @@ func (m *PostModel) updateViews() *PostModel {
 	}
 
 	m.viewport.YOffset = 0
+	headerHeight := lipgloss.Height(m.headerView())
+	footerHeight := lipgloss.Height(m.footerView())
+	helpHeight := lipgloss.Height(m.help.View(m.keys))
+	verticalMarginHeight := headerHeight + footerHeight + helpHeight
+	m.viewport.Height = m.windowHeight - verticalMarginHeight
 	m.viewport.SetContent(m.formatter.Text(text))
 	return m
 }
