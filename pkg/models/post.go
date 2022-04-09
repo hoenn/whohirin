@@ -56,7 +56,7 @@ func NewPost(postID string, previous tea.Model, fetcher *data.Fetcher) (*PostMod
 	}
 	h := help.New()
 	h.Width = initWindowSize.Width
-	s := &PostModel{
+	m := &PostModel{
 		postID:            postID,
 		hn:                fetcher,
 		previous:          previous,
@@ -71,20 +71,20 @@ func NewPost(postID string, previous tea.Model, fetcher *data.Fetcher) (*PostMod
 	}
 
 	// Initial Viewport setup
-	headerHeight := lipgloss.Height(s.headerView())
-	footerHeight := lipgloss.Height(s.footerView())
-	helpHeight := lipgloss.Height(s.help.View(s.keys))
+	headerHeight := lipgloss.Height(m.headerView())
+	footerHeight := lipgloss.Height(m.footerView())
+	helpHeight := lipgloss.Height(m.help.View(m.keys))
 	verticalMarginHeight := headerHeight + footerHeight + helpHeight
-	s.windowHeight = initWindowSize.Height
-	s.viewport = viewport.New(initWindowSize.Width, s.windowHeight-verticalMarginHeight)
-	s.formatter.Width = initWindowSize.Width - 1
-	s.viewport.YPosition = headerHeight
-	s.loadCurrentSelection()
-	s.updateViews()
+	m.windowHeight = initWindowSize.Height
+	m.viewport = viewport.New(initWindowSize.Width, m.windowHeight-verticalMarginHeight)
+	m.formatter.Width = initWindowSize.Width - 1
+	m.viewport.YPosition = headerHeight
+	m.loadCurrentSelection()
+	m.updateViews()
 
-	s.ready = true
+	m.ready = true
 
-	return s, nil
+	return m, nil
 }
 
 type postKeyMap struct {

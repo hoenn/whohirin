@@ -25,7 +25,7 @@ type hl struct {
 
 var mapping = map[string]*hl{
 	"go": &hl{
-		r: regexp.MustCompile("(?i)\\bgo\\b"),
+		r: regexp.MustCompile("(?i)\\b(golang|gopher|go)\\b"),
 		c: "12",
 	},
 	"scala": &hl{
