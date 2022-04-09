@@ -9,8 +9,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/hoenn/go-hn/pkg/hnapi"
-	"github.com/muesli/reflow/wordwrap"
-	"jaytaylor.com/html2text"
 )
 
 var (
@@ -73,7 +71,7 @@ func NewStory(storyID int, previous tea.Model, client *hnapi.HNClient) *StoryMod
 	s.viewport = viewport.New(initWindowSize.Width, initWindowSize.Height-verticalMarginHeight)
 	s.viewport.YPosition = headerHeight
 	s.currentComment = s.loadCommentContent()
-	s.viewport.SetContent(s.formatCurrentContent())
+	s.viewport.SetContent(s.formatter.Text(s.currentComment.Text))
 	s.ready = true
 
 	s.viewport.YPosition = headerHeight + 1
@@ -115,10 +113,12 @@ func (m StoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "left", "h":
 			m.currentSelection = m.decCommentSelection()
 			m.currentComment = m.loadCommentContent()
+			m.viewport.YOffset = 0
 			m.viewport.SetContent(m.formatter.Text(m.currentComment.Text))
 		case "right", "l":
 			m.currentSelection = m.incCommentSelection()
 			m.currentComment = m.loadCommentContent()
+			m.viewport.YOffset = 0
 			m.viewport.SetContent(m.formatter.Text(m.currentComment.Text))
 		case "backspace":
 			return m.previous, nil
@@ -133,9 +133,8 @@ func (m StoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewport.YPosition = headerHeight
 			m.currentComment = m.loadCommentContent()
 			m.viewport.SetContent(m.formatter.Text(m.currentComment.Text))
-			m.ready = true
-
 			m.viewport.YPosition = headerHeight + 1
+			m.ready = true
 		} else {
 			m.viewport.Width = msg.Width
 			m.viewport.Height = msg.Height - verticalMarginHeight
@@ -147,21 +146,6 @@ func (m StoryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m StoryModel) formatCurrentContent() string {
-	var text string
-	if m.currentComment != nil {
-		t, err := html2text.FromString(m.currentComment.Text, html2text.Options{TextOnly: true})
-		if err != nil {
-			return "unable to format content"
-		}
-		text = t
-	}
-	if text == "" {
-		return fmt.Sprintf("Comment %d, was [deleted]", m.currentComment.ID)
-	}
-	return wordwrap.String(text, 80)
-}
-
 func (m StoryModel) headerView(text string) string {
 	title := titleStyle.Render(fmt.Sprintf("https://news.ycombinator.com/user?id=%s", text))
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(title)))
@@ -169,7 +153,13 @@ func (m StoryModel) headerView(text string) string {
 }
 
 func (m StoryModel) footerView() string {
-	info := infoStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
+
+	var info string
+	if m.viewport.AtBottom() {
+		info = infoStyle.Render("✔")
+	} else {
+		info = infoStyle.Render("🡳")
+	}
 	currentNumberInfo := infoStyle.Render(fmt.Sprintf("%d / %d", m.currentSelection+1, len(m.comments)))
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)-lipgloss.Width(currentNumberInfo)))
 	return lipgloss.JoinHorizontal(lipgloss.Center, currentNumberInfo, line, info)
