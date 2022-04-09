@@ -5,19 +5,22 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hoenn/go-hn/pkg/hnapi"
+	"github.com/hoenn/whohirin/pkg/data"
 )
 
 type App struct {
 	current tea.Model
+	fetcher *data.Fetcher
 }
 
 func NewApp(userID string, client *hnapi.HNClient) (*App, error) {
-	ids, err := getPostList(client, userID)
+	f, err := data.NewFetcher(userID)
 	if err != nil {
-		return nil, fmt.Errorf("could not get post list for userID %s: %w", userID, err)
+		return nil, fmt.Errorf("could not initialize fetcher: %w", err)
 	}
 	return &App{
-		current: *NewStoryList(ids, client),
+		current: *NewPostList(f),
+		fetcher: f,
 	}, nil
 }
 
@@ -37,11 +40,4 @@ func (a App) View() string {
 }
 func (a App) Init() tea.Cmd {
 	return nil
-}
-func getPostList(client *hnapi.HNClient, userID string) ([]int, error) {
-	u, err := client.User(userID)
-	if err != nil {
-		return []int{}, err
-	}
-	return u.Submitted, nil
 }

@@ -2,6 +2,8 @@ package data
 
 import (
 	"fmt"
+	"sort"
+	"strconv"
 
 	"github.com/hoenn/go-hn/pkg/hnapi"
 )
@@ -43,14 +45,23 @@ func NewFetcher(userID string) (*Fetcher, error) {
 	return &Fetcher{
 		hn:     client,
 		userID: userID,
+		posts:  posts,
 	}, nil
 }
 
+// PostList returns keys in descending order.
 func (f *Fetcher) PostList() []string {
 	keys := make([]string, 0, len(f.posts))
 	for p := range f.posts {
 		keys = append(keys, p)
 	}
+	sort.Slice(keys, func(i, j int) bool {
+		// these keys are returned from the API. A lot of things would break
+		// if they weren't integers.
+		a, _ := strconv.Atoi(keys[i])
+		b, _ := strconv.Atoi(keys[j])
+		return a > b
+	})
 	return keys
 }
 
@@ -88,7 +99,7 @@ func (f *Fetcher) Post(id string) (*Post, error) {
 }
 
 // PostCommentsList will lazy load a Post into the cache and return a list of comment
-// IDs for that post.
+// IDs for that post in descending order.
 func (f *Fetcher) PostCommentsList(postID string) ([]string, error) {
 	p, err := f.Post(postID)
 	if err != nil {
@@ -99,6 +110,13 @@ func (f *Fetcher) PostCommentsList(postID string) ([]string, error) {
 	for c := range p.comments {
 		keys = append(keys, c)
 	}
+	sort.Slice(keys, func(i, j int) bool {
+		// these keys are returned from the API. A lot of things would break
+		// if they weren't integers.
+		a, _ := strconv.Atoi(keys[i])
+		b, _ := strconv.Atoi(keys[j])
+		return a > b
+	})
 	return keys, nil
 }
 
