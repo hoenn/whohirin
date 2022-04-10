@@ -122,8 +122,8 @@ var postKeys = postKeyMap{
 		key.WithHelp("backspace", "previous view"),
 	),
 	Select: key.NewBinding(
-		key.WithKeys("enter", "space"),
-		key.WithHelp("enter / space", "mark as read"),
+		key.WithKeys("enter"),
+		key.WithHelp("enter", "mark as read"),
 	),
 	Help: key.NewBinding(
 		key.WithKeys("h", "?"),
