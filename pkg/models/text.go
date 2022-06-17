@@ -18,58 +18,58 @@ func (f *formatter) Text(s string) string {
 	return wordwrap.String(ss, f.Width)
 }
 
-type hl struct {
-	r *regexp.Regexp
-	c string
+type highlight struct {
+	r     *regexp.Regexp
+	color string
 }
 
-var mapping = map[string]*hl{
-	"go": &hl{
-		r: regexp.MustCompile("(?i)\\b(golang|gopher|go)\\b"),
-		c: "12",
+var mapping = map[string]*highlight{
+	"go": &highlight{
+		r:     regexp.MustCompile("(?i)\\b(golang|gopher|go)\\b"),
+		color: "12",
 	},
-	"scala": &hl{
-		r: regexp.MustCompile("(?i)\\bscala\\b"),
-		c: "6",
+	"scala": &highlight{
+		r:     regexp.MustCompile("(?i)\\bscala\\b"),
+		color: "6",
 	},
-	"c": &hl{
-		r: regexp.MustCompile("(?i)\\bc\\b"),
-		c: "22",
+	"c": &highlight{
+		r:     regexp.MustCompile("(?i)\\bc\\b"),
+		color: "22",
 	},
-	"python": &hl{
-		r: regexp.MustCompile("(?i)\\b(python|django|flask)\\b"),
-		c: "90",
+	"python": &highlight{
+		r:     regexp.MustCompile("(?i)\\b(python|django|flask)\\b"),
+		color: "90",
 	},
-	"ruby": &hl{
-		r: regexp.MustCompile("(?i)\\b(ruby|rails)\\b"),
-		c: "100",
+	"ruby": &highlight{
+		r:     regexp.MustCompile("(?i)\\b(ruby|rails)\\b"),
+		color: "100",
 	},
-	"typescript": &hl{
-		r: regexp.MustCompile("(?i)\\b(typescript)\\b"),
-		c: "120",
+	"typescript": &highlight{
+		r:     regexp.MustCompile("(?i)\\b(typescript)\\b"),
+		color: "120",
 	},
-	"javascript": &hl{
-		r: regexp.MustCompile("(?i)\\b(node.js|node|javascript|js)\\b"),
-		c: "85",
+	"javascript": &highlight{
+		r:     regexp.MustCompile("(?i)\\b(node.js|node|javascript|js)\\b"),
+		color: "85",
 	},
-	"jvm": &hl{
-		r: regexp.MustCompile("(?i)\\b(java|groovy|kotlin|jvm)\\b"),
-		c: "143",
+	"jvm": &highlight{
+		r:     regexp.MustCompile("(?i)\\b(java|groovy|kotlin|jvm)\\b"),
+		color: "143",
 	},
-	"remote": &hl{
-		r: regexp.MustCompile("(?i)remote"),
-		c: "45",
+	"remote": &highlight{
+		r:     regexp.MustCompile("(?i)remote"),
+		color: "45",
 	},
-	"backend": &hl{
-		r: regexp.MustCompile("(?i)\\b(backend|back-end|back end)\\b"),
-		c: "160",
+	"backend": &highlight{
+		r:     regexp.MustCompile("(?i)\\b(backend|back-end|back end)\\b"),
+		color: "160",
 	},
 }
 
 func highlightWords(s string) string {
 	for _, highlighter := range mapping {
 		s = highlighter.r.ReplaceAllStringFunc(s, func(match string) string {
-			return lipgloss.NewStyle().Foreground(lipgloss.Color(highlighter.c)).Render(match)
+			return lipgloss.NewStyle().Foreground(lipgloss.Color(highlighter.color)).Render(match)
 		})
 	}
 	return s
